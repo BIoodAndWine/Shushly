@@ -9,10 +9,12 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import com.shushly.app.App
+import com.shushly.app.data.repository.SettingsRepository
 import com.shushly.app.desktop.engine.WindowsDnsProtectionController
 
 fun main() = application {
-    val protectionController = WindowsDnsProtectionController()
+    val settingsRepository = SettingsRepository()
+    val protectionController = WindowsDnsProtectionController(initialConfig = settingsRepository.configuration.value)
 
     Window(
         onCloseRequest = ::exitApplication,
@@ -24,7 +26,8 @@ fun main() = application {
         resizable = false
     ) {
         App(
-            protectionController = protectionController
+            protectionController = protectionController,
+            settingsRepository = settingsRepository
         )
     }
 }

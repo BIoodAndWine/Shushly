@@ -85,7 +85,7 @@ fun HomeScreen(
 
             // Protection Level Selector (Default / Balanced / Strong)
             ProtectionLevelSelector(
-                selectedLevel = uiState.configuration.protectionLevel,
+                selectedLevel = if (uiState.status.isProtected) uiState.status.activeLevel else uiState.configuration.protectionLevel,
                 onLevelSelected = { level -> viewModel.selectProtectionLevel(level) }
             )
 

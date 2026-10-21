@@ -62,6 +62,8 @@ class AndroidDnsProtectionController(
                 putExtra(ShushlyVpnService.EXTRA_DOH_URL, dohUrl)
                 putExtra(ShushlyVpnService.EXTRA_BACKUP_DOH_URL, backupDohUrl)
                 putExtra(ShushlyVpnService.EXTRA_FILTER_NAME, filterName)
+                putExtra(ShushlyVpnService.EXTRA_PROTECTION_LEVEL, config.protectionLevel.name)
+                putExtra(ShushlyVpnService.EXTRA_IS_CUSTOM, config.isCustomConfig)
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

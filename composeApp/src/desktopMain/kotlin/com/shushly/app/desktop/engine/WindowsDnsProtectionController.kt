@@ -35,22 +35,31 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 
 class WindowsDnsProtectionController(
+    initialConfig: DnsConfiguration = DnsConfiguration(),
     private val dohClient: DohClient = DohClient()
 ) : DnsProtectionController {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _status = MutableStateFlow(ProtectionStatus(state = StatusState.DISABLED))
+    private val _status = MutableStateFlow(
+        ProtectionStatus(
+            state = StatusState.DISABLED,
+            activeLevel = initialConfig.protectionLevel,
+            activeResolverName = initialConfig.protectionLevel.filterName,
+            activeResolverEndpoint = initialConfig.protectionLevel.dohUrl,
+            isCustomResolver = initialConfig.isCustomConfig
+        )
+    )
     override val status: StateFlow<ProtectionStatus> = _status.asStateFlow()
 
-    private val _configuration = MutableStateFlow(DnsConfiguration())
+    private val _configuration = MutableStateFlow(initialConfig)
     override val configuration: StateFlow<DnsConfiguration> = _configuration.asStateFlow()
 
     private var forwarderSocket: DatagramSocket? = null
     private var forwarderJob: Job? = null
     private var originalDnsBackup: SavedAdapterDns? = null
 
-    private var activeDohUrl = ProtectionLevel.BALANCED.dohUrl
+    private var activeDohUrl = initialConfig.protectionLevel.dohUrl
     private var activeBackupDohUrl: String? = null
 
     private val httpClient by lazy {
@@ -96,7 +105,9 @@ class WindowsDnsProtectionController(
         _status.value = ProtectionStatus(
             state = StatusState.CONNECTING,
             activeResolverName = filterName,
-            activeResolverEndpoint = dohUrl
+            activeResolverEndpoint = dohUrl,
+            activeLevel = config.protectionLevel,
+            isCustomResolver = config.isCustomConfig
         )
 
         activeDohUrl = dohUrl
@@ -106,7 +117,14 @@ class WindowsDnsProtectionController(
         val startForwarderRes = startLocalForwarder()
         if (startForwarderRes.isFailure) {
             val err = startForwarderRes.exceptionOrNull()?.message ?: "Failed to start local DNS forwarder on port 53"
-            _status.value = ProtectionStatus(state = StatusState.ERROR, errorMessage = err)
+            _status.value = ProtectionStatus(
+                state = StatusState.ERROR,
+                errorMessage = err,
+                activeLevel = config.protectionLevel,
+                activeResolverName = filterName,
+                activeResolverEndpoint = dohUrl,
+                isCustomResolver = config.isCustomConfig
+            )
             return@withContext Result.failure(Exception(err))
         }
 
@@ -115,7 +133,14 @@ class WindowsDnsProtectionController(
         if (adapterRes.isFailure) {
             val err = adapterRes.exceptionOrNull()?.message ?: "Failed to configure Windows DNS client settings"
             stopLocalForwarder()
-            _status.value = ProtectionStatus(state = StatusState.ERROR, errorMessage = err)
+            _status.value = ProtectionStatus(
+                state = StatusState.ERROR,
+                errorMessage = err,
+                activeLevel = config.protectionLevel,
+                activeResolverName = filterName,
+                activeResolverEndpoint = dohUrl,
+                isCustomResolver = config.isCustomConfig
+            )
             return@withContext Result.failure(Exception(err))
         }
 
@@ -127,6 +152,8 @@ class WindowsDnsProtectionController(
             state = StatusState.CONNECTED,
             activeResolverName = filterName,
             activeResolverEndpoint = dohUrl,
+            activeLevel = config.protectionLevel,
+            isCustomResolver = config.isCustomConfig,
             connectedSinceEpochMs = System.currentTimeMillis(),
             latencyMs = health.latencyMs
         )
@@ -138,7 +165,13 @@ class WindowsDnsProtectionController(
         restoreWindowsAdapterDns()
         stopLocalForwarder()
         _configuration.value = _configuration.value.copy(isProtectionEnabled = false)
-        _status.value = ProtectionStatus(state = StatusState.DISABLED)
+        _status.value = ProtectionStatus(
+            state = StatusState.DISABLED,
+            activeLevel = _configuration.value.protectionLevel,
+            activeResolverName = _configuration.value.protectionLevel.filterName,
+            activeResolverEndpoint = _configuration.value.protectionLevel.dohUrl,
+            isCustomResolver = _configuration.value.isCustomConfig
+        )
         Result.success(Unit)
     }
 
@@ -147,6 +180,13 @@ class WindowsDnsProtectionController(
         _configuration.value = updated
         if (status.value.state == StatusState.CONNECTED) {
             return enableProtection(level)
+        } else {
+            _status.value = _status.value.copy(
+                activeLevel = level,
+                activeResolverName = level.filterName,
+                activeResolverEndpoint = level.dohUrl,
+                isCustomResolver = false
+            )
         }
         return Result.success(Unit)
     }
@@ -155,6 +195,13 @@ class WindowsDnsProtectionController(
         _configuration.value = config
         if (status.value.state == StatusState.CONNECTED) {
             return enableProtectionWithConfig(config)
+        } else {
+            _status.value = _status.value.copy(
+                activeLevel = config.protectionLevel,
+                activeResolverName = if (config.isCustomConfig) "Custom DoH" else config.protectionLevel.filterName,
+                activeResolverEndpoint = if (config.isCustomConfig && !config.primaryCustomDohUrl.isNullOrBlank()) config.primaryCustomDohUrl else config.protectionLevel.dohUrl,
+                isCustomResolver = config.isCustomConfig
+            )
         }
         return Result.success(Unit)
     }

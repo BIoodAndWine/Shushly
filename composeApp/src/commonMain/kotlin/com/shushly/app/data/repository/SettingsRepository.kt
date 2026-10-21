@@ -34,7 +34,10 @@ class SettingsRepository(
     }
 
     fun setProtectionLevel(level: ProtectionLevel) {
-        val updated = _configuration.value.copy(protectionLevel = level)
+        val updated = _configuration.value.copy(
+            protectionLevel = level,
+            isCustomConfig = false
+        )
         updateConfiguration(updated)
     }
 

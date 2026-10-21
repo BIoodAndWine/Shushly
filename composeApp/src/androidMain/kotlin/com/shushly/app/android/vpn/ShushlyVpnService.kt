@@ -54,6 +54,8 @@ class ShushlyVpnService : VpnService() {
     private var activeDohUrl = ProtectionLevel.BALANCED.dohUrl
     private var activeBackupDohUrl: String? = null
     private var activeFilterName = ProtectionLevel.BALANCED.filterName
+    private var activeProtectionLevel = ProtectionLevel.BALANCED
+    private var isCustomResolver = false
 
     private val httpClient by lazy {
         HttpClient(CIO)
@@ -67,7 +69,13 @@ class ShushlyVpnService : VpnService() {
         override fun onAvailable(network: Network) {
             super.onAvailable(network)
             if (isRunning) {
-                _serviceStatus.value = _serviceStatus.value.copy(state = StatusState.CONNECTED)
+                _serviceStatus.value = _serviceStatus.value.copy(
+                    state = StatusState.CONNECTED,
+                    activeLevel = activeProtectionLevel,
+                    activeResolverName = activeFilterName,
+                    activeResolverEndpoint = activeDohUrl,
+                    isCustomResolver = isCustomResolver
+                )
                 updateNotification("Protection is On")
             }
         }
@@ -99,11 +107,32 @@ class ShushlyVpnService : VpnService() {
 
         val dohUrl = intent?.getStringExtra(EXTRA_DOH_URL) ?: ProtectionLevel.BALANCED.dohUrl
         val backupDohUrl = intent?.getStringExtra(EXTRA_BACKUP_DOH_URL)
-        val filterName = intent?.getStringExtra(EXTRA_FILTER_NAME) ?: "Control D OISD Full"
+        val filterName = intent?.getStringExtra(EXTRA_FILTER_NAME) ?: ProtectionLevel.BALANCED.filterName
+        val levelName = intent?.getStringExtra(EXTRA_PROTECTION_LEVEL)
+        val isCustom = intent?.getBooleanExtra(EXTRA_IS_CUSTOM, false) ?: false
+
+        if (levelName != null) {
+            try {
+                activeProtectionLevel = ProtectionLevel.valueOf(levelName)
+            } catch (_: Exception) {}
+        }
 
         activeDohUrl = dohUrl
         activeBackupDohUrl = backupDohUrl
         activeFilterName = filterName
+        isCustomResolver = isCustom
+
+        if (isRunning) {
+            // Already running: smoothly update resolver and live status without interrupting tunnel
+            _serviceStatus.value = _serviceStatus.value.copy(
+                activeResolverName = activeFilterName,
+                activeResolverEndpoint = activeDohUrl,
+                activeLevel = activeProtectionLevel,
+                isCustomResolver = isCustomResolver
+            )
+            updateNotification("Protection is On ($activeFilterName)")
+            return START_STICKY
+        }
 
         startVpn()
         return START_STICKY
@@ -112,7 +141,7 @@ class ShushlyVpnService : VpnService() {
     private fun startVpn() {
         if (isRunning) {
             // Already running, update notification
-            updateNotification("Protection is On")
+            updateNotification("Protection is On ($activeFilterName)")
             return
         }
 
@@ -120,7 +149,9 @@ class ShushlyVpnService : VpnService() {
             _serviceStatus.value = ProtectionStatus(
                 state = StatusState.CONNECTING,
                 activeResolverName = activeFilterName,
-                activeResolverEndpoint = activeDohUrl
+                activeResolverEndpoint = activeDohUrl,
+                activeLevel = activeProtectionLevel,
+                isCustomResolver = isCustomResolver
             )
 
             startForeground(NOTIFICATION_ID, buildNotification("Connecting..."))
@@ -147,7 +178,11 @@ class ShushlyVpnService : VpnService() {
             if (vpnInterface == null) {
                 _serviceStatus.value = ProtectionStatus(
                     state = StatusState.ERROR,
-                    errorMessage = "Failed to establish VPN interface. Permission may have been revoked."
+                    errorMessage = "Failed to establish VPN interface. Permission may have been revoked.",
+                    activeLevel = activeProtectionLevel,
+                    activeResolverName = activeFilterName,
+                    activeResolverEndpoint = activeDohUrl,
+                    isCustomResolver = isCustomResolver
                 )
                 stopSelf()
                 return
@@ -158,6 +193,8 @@ class ShushlyVpnService : VpnService() {
                 state = StatusState.CONNECTED,
                 activeResolverName = activeFilterName,
                 activeResolverEndpoint = activeDohUrl,
+                activeLevel = activeProtectionLevel,
+                isCustomResolver = isCustomResolver,
                 connectedSinceEpochMs = System.currentTimeMillis()
             )
 
@@ -167,7 +204,11 @@ class ShushlyVpnService : VpnService() {
         } catch (e: Exception) {
             _serviceStatus.value = ProtectionStatus(
                 state = StatusState.ERROR,
-                errorMessage = e.message ?: "Failed to start DNS engine"
+                errorMessage = e.message ?: "Failed to start DNS engine",
+                activeLevel = activeProtectionLevel,
+                activeResolverName = activeFilterName,
+                activeResolverEndpoint = activeDohUrl,
+                isCustomResolver = isCustomResolver
             )
             stopSelf()
         }
@@ -363,7 +404,13 @@ class ShushlyVpnService : VpnService() {
         } catch (_: Exception) {}
         vpnInterface = null
 
-        _serviceStatus.value = ProtectionStatus(state = StatusState.DISABLED)
+        _serviceStatus.value = ProtectionStatus(
+            state = StatusState.DISABLED,
+            activeLevel = activeProtectionLevel,
+            activeResolverName = activeFilterName,
+            activeResolverEndpoint = activeDohUrl,
+            isCustomResolver = isCustomResolver
+        )
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -429,6 +476,8 @@ class ShushlyVpnService : VpnService() {
         const val EXTRA_DOH_URL = "extra_doh_url"
         const val EXTRA_BACKUP_DOH_URL = "extra_backup_doh_url"
         const val EXTRA_FILTER_NAME = "extra_filter_name"
+        const val EXTRA_PROTECTION_LEVEL = "extra_protection_level"
+        const val EXTRA_IS_CUSTOM = "extra_is_custom"
 
         private const val CHANNEL_ID = "shushly_protection_channel"
         private const val NOTIFICATION_ID = 4242

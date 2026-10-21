@@ -1,11 +1,14 @@
 package com.shushly.app
 
 import com.shushly.app.data.repository.DnsDirectoryRepository
+import com.shushly.app.data.repository.SettingsRepository
 import com.shushly.app.domain.engine.DnsPacketParser
 import com.shushly.app.domain.engine.DohClient
 import com.shushly.app.domain.model.DnsConfiguration
 import com.shushly.app.domain.model.ProtectionLevel
+import com.shushly.app.domain.model.ProtectionStatus
 import com.shushly.app.domain.model.Region
+import com.shushly.app.domain.model.StatusState
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -119,5 +122,41 @@ class DnsTests {
         assertTrue(health.isReachable, "Balanced endpoint should be reachable")
         assertTrue(health.latencyMs > 0, "Measured latency should be positive: ${health.latencyMs} ms")
         assertTrue(health.isFilteringActive, "Ad filtering should be active on OISD endpoint")
+    }
+
+    @Test
+    fun testSetProtectionLevelUpdatesActiveLevelAndResetsCustom() {
+        val repo = SettingsRepository()
+
+        // Select DEFAULT mode
+        repo.setProtectionLevel(ProtectionLevel.DEFAULT)
+        assertEquals(ProtectionLevel.DEFAULT, repo.configuration.value.protectionLevel)
+        assertFalse(repo.configuration.value.isCustomConfig)
+
+        // Select STRONG mode
+        repo.setProtectionLevel(ProtectionLevel.STRONG)
+        assertEquals(ProtectionLevel.STRONG, repo.configuration.value.protectionLevel)
+        assertFalse(repo.configuration.value.isCustomConfig)
+    }
+
+    @Test
+    fun testProtectionStatusPreservesActiveLevel() {
+        val statusStrong = ProtectionStatus(
+            state = StatusState.CONNECTED,
+            activeLevel = ProtectionLevel.STRONG,
+            activeResolverName = ProtectionLevel.STRONG.filterName,
+            activeResolverEndpoint = ProtectionLevel.STRONG.dohUrl
+        )
+        assertEquals(ProtectionLevel.STRONG, statusStrong.activeLevel)
+        assertEquals(ProtectionLevel.STRONG.filterName, statusStrong.activeResolverName)
+
+        val statusDefault = ProtectionStatus(
+            state = StatusState.CONNECTED,
+            activeLevel = ProtectionLevel.DEFAULT,
+            activeResolverName = ProtectionLevel.DEFAULT.filterName,
+            activeResolverEndpoint = ProtectionLevel.DEFAULT.dohUrl
+        )
+        assertEquals(ProtectionLevel.DEFAULT, statusDefault.activeLevel)
+        assertEquals(ProtectionLevel.DEFAULT.filterName, statusDefault.activeResolverName)
     }
 }

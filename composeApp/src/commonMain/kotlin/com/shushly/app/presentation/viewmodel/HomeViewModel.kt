@@ -87,11 +87,12 @@ class HomeViewModel(
 
         viewModelScope.launch {
             settingsRepository.setProtectionLevel(level)
-            // If already connected, smoothly switch resolver
             if (uiState.value.status.state == StatusState.CONNECTED) {
                 _isBusy.value = true
                 protectionController.setProtectionLevel(level)
                 _isBusy.value = false
+            } else {
+                protectionController.setProtectionLevel(level)
             }
         }
     }
