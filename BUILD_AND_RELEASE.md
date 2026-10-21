@@ -80,7 +80,7 @@ Output directory:
 .\gradlew.bat :composeApp:packageMsi
 ```
 Output MSI:
-`composeApp\build\compose\binaries\main\msi\Shushly-1.0.0.msi`
+`composeApp\build\compose\binaries\main\msi\Shushly-0.1.1.msi`
 
 ---
 

@@ -10,6 +10,8 @@ import com.shushly.app.domain.model.DnsConfiguration
 import com.shushly.app.domain.model.ProtectionLevel
 import com.shushly.app.domain.model.ProtectionStatus
 import com.shushly.app.domain.model.StatusState
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +35,10 @@ class HomeViewModel(
     private val _isBusy = MutableStateFlow(false)
     private val _feedbackMessage = MutableStateFlow<String?>(null)
     private var lastObservedState = StatusState.DISABLED
+    private var isInitialized = false
+
+    private var lastSoundPlayed: SoundType? = null
+    private var lastSoundMark: TimeMark? = null
 
     val uiState: StateFlow<HomeUiState> = combine(
         protectionController.status,
@@ -53,42 +59,81 @@ class HomeViewModel(
     )
 
     init {
-        // Observe status transitions to trigger connected / error audio cues
+        // Observe status transitions to trigger verified state-change audio cues
         viewModelScope.launch {
             protectionController.status.collect { status ->
-                val prev = lastObservedState
                 val current = status.state
+
+                // Ignore startup emission to keep application initialization completely silent
+                if (!isInitialized) {
+                    isInitialized = true
+                    lastObservedState = current
+                    return@collect
+                }
+
+                val prev = lastObservedState
                 lastObservedState = current
 
-                if (prev != StatusState.CONNECTED && current == StatusState.CONNECTED) {
-                    playSound(SoundType.CONNECTED)
-                } else if (prev != StatusState.ERROR && current == StatusState.ERROR) {
-                    playSound(SoundType.ERROR)
+                if (prev != current) {
+                    when (current) {
+                        StatusState.CONNECTED -> {
+                            // Only play confirmation chime when transitioning from CONNECTING or DISABLED (user action),
+                            // keeping automatic background reconnections (from RECONNECTING) silent.
+                            if (prev != StatusState.RECONNECTING) {
+                                playSound(SoundType.CONNECTED)
+                            }
+                        }
+                        StatusState.DISABLED -> {
+                            // Gentle disconnect sound only after confirmed disconnection
+                            if (prev == StatusState.CONNECTED || prev == StatusState.CONNECTING) {
+                                playSound(SoundType.TOGGLE_OFF)
+                            }
+                        }
+                        StatusState.ERROR -> {
+                            // Exactly one distinct error cue when failure is confirmed
+                            if (prev != StatusState.ERROR) {
+                                playSound(SoundType.ERROR)
+                            }
+                        }
+                        StatusState.CONNECTING, StatusState.RECONNECTING -> {
+                            // Silent status transitions during connection negotiation and auto-recovery
+                        }
+                    }
                 }
             }
         }
     }
 
     private fun playSound(sound: SoundType) {
-        if (settingsRepository.soundEnabled.value) {
-            soundPlayer?.play(sound)
+        if (!settingsRepository.soundEnabled.value) return
+
+        // Debounce rapid identical sound cues within 80ms
+        val now = TimeSource.Monotonic.markNow()
+        val prevMark = lastSoundMark
+        if (sound == lastSoundPlayed && prevMark != null && prevMark.elapsedNow().inWholeMilliseconds < 80L) {
+            return
         }
+
+        lastSoundMark = now
+        lastSoundPlayed = sound
+        soundPlayer?.play(sound)
     }
 
     fun toggleProtection() {
-        val currentStatus = uiState.value.status
-        if (uiState.value.isBusy) return
+        if (_isBusy.value) return
+        val currentStatus = protectionController.status.value
+
+        // Immediate tactile press feedback on physical button press
+        playSound(SoundType.CLICK)
 
         viewModelScope.launch {
             _isBusy.value = true
             _feedbackMessage.value = null
             try {
                 if (currentStatus.state == StatusState.CONNECTED || currentStatus.state == StatusState.CONNECTING) {
-                    playSound(SoundType.TOGGLE_OFF)
                     protectionController.disableProtection()
                     settingsRepository.setProtectionEnabled(false)
                 } else {
-                    playSound(SoundType.TOGGLE_ON)
                     val config = settingsRepository.configuration.value
                     if (config.isCustomConfig) {
                         protectionController.enableProtectionWithConfig(config)
@@ -98,8 +143,11 @@ class HomeViewModel(
                     settingsRepository.setProtectionEnabled(true)
                 }
             } catch (e: Exception) {
-                playSound(SoundType.ERROR)
                 _feedbackMessage.value = e.message ?: "Failed to change protection state"
+                // Only play error sound if controller didn't transition to ERROR state (prevents duplicate cues)
+                if (protectionController.status.value.state != StatusState.ERROR) {
+                    playSound(SoundType.ERROR)
+                }
             } finally {
                 _isBusy.value = false
             }
@@ -107,12 +155,14 @@ class HomeViewModel(
     }
 
     fun selectProtectionLevel(level: ProtectionLevel) {
-        if (uiState.value.configuration.protectionLevel == level && !uiState.value.configuration.isCustomConfig) return
+        val currentConfig = settingsRepository.configuration.value
+        if (currentConfig.protectionLevel == level && !currentConfig.isCustomConfig) return
 
+        // Crisp selection tick when accepted
         playSound(SoundType.MODE_CHANGE)
         viewModelScope.launch {
             settingsRepository.setProtectionLevel(level)
-            if (uiState.value.status.state == StatusState.CONNECTED) {
+            if (protectionController.status.value.state == StatusState.CONNECTED) {
                 _isBusy.value = true
                 protectionController.setProtectionLevel(level)
                 _isBusy.value = false
@@ -133,6 +183,7 @@ class HomeViewModel(
     val themeMode: StateFlow<String> = settingsRepository.themeMode
 
     fun toggleTheme(isCurrentlyDark: Boolean) {
+        // Theme switching remains silent and visually fluid
         val next = if (isCurrentlyDark) "light" else "dark"
         settingsRepository.setThemeMode(next)
     }

@@ -18,7 +18,7 @@ data class SettingsUiState(
     val isPremium: Boolean = true,
     val themeMode: String = "dark",
     val soundEnabled: Boolean = true,
-    val appVersion: String = "1.0.0"
+    val appVersion: String = "0.1.1"
 )
 
 class SettingsViewModel(
@@ -36,7 +36,7 @@ class SettingsViewModel(
             isPremium = true,
             themeMode = theme,
             soundEnabled = sound,
-            appVersion = "1.0.0"
+            appVersion = "0.1.1"
         )
     }.stateIn(
         scope = viewModelScope,

@@ -93,15 +93,22 @@ For full architectural documentation, read [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Downloads & Installation
 
-### Windows 10 / 11
-1. Download the latest `Shushly-Windows-Portable-v*.zip` or `Shushly-Windows-v*.msi` from [Releases](https://github.com/BIoodAndWine/Shushly/releases).
-2. Extract the archive and launch `Shushly.exe` (or run the installer).
-3. Click the power button to protect your system.
+All verified release binaries are published under [GitHub Releases](https://github.com/BIoodAndWine/Shushly/releases).
 
-### Android (Android 8.0+)
-1. Download the latest `Shushly-Android-v*.apk` from [Releases](https://github.com/BIoodAndWine/Shushly/releases).
-2. Install the APK on your device.
-3. Grant the standard Android VPN permission prompt when activating for the first time.
+| Platform | Format | Direct Download | Verification Status |
+|---|---|---|---|
+| **Windows 10 / 11** | Installer (`.msi`) | [Shushly-Windows-v0.1.1.msi](https://github.com/BIoodAndWine/Shushly/releases/download/v0.1.1/Shushly-Windows-v0.1.1.msi) | :white_check_mark: Verified with WiX Toolset |
+| **Windows 10 / 11** | Portable (`.zip`) | [Shushly-Windows-Portable-v0.1.1.zip](https://github.com/BIoodAndWine/Shushly/releases/download/v0.1.1/Shushly-Windows-Portable-v0.1.1.zip) | :white_check_mark: Verified Standalone JRE |
+| **Android 8.0 - 15** | Release APK (`.apk`) | [Shushly-Android-v0.1.1.apk](https://github.com/BIoodAndWine/Shushly/releases/download/v0.1.1/Shushly-Android-v0.1.1.apk) | :white_check_mark: Production Release APK |
+
+### Installation Notes
+- **Windows:** Run `Shushly-Windows-v0.1.1.msi` to install system-wide, or extract `Shushly-Windows-Portable-v0.1.1.zip` and run `Shushly.exe`. No Java installation is required; a minimal runtime is bundled.
+- **Android:** Download and install `Shushly-Android-v0.1.1.apk`. Accept the standard Android VPN dialog when activating protection for the first time.
+
+> **Note on GitHub Releases vs Packages vs Deployments:**
+> - **Releases:** Shushly is a consumer end-user application. All downloadable binaries and cryptographic checksums are distributed via Releases.
+> - **Packages:** Shushly is not an SDK or library module; GitHub Packages is intentionally unused.
+> - **Deployments:** Intended for live hosted services. The documentation is hosted directly within this repository.
 
 ---
 

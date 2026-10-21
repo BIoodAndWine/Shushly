@@ -83,8 +83,24 @@ android {
         applicationId = "com.shushly.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "0.1.1"
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("SHUSHLY_KEYSTORE_PATH") ?: project.findProperty("SHUSHLY_KEYSTORE_PATH") as? String
+            val keystorePassword = System.getenv("SHUSHLY_KEYSTORE_PASSWORD") ?: project.findProperty("SHUSHLY_KEYSTORE_PASSWORD") as? String
+            val keyAliasStr = System.getenv("SHUSHLY_KEY_ALIAS") ?: project.findProperty("SHUSHLY_KEY_ALIAS") as? String
+            val keyPasswordStr = System.getenv("SHUSHLY_KEY_PASSWORD") ?: project.findProperty("SHUSHLY_KEY_PASSWORD") as? String
+
+            if (!keystorePath.isNullOrBlank() && File(keystorePath).exists()) {
+                storeFile = File(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keyAliasStr
+                keyPassword = keyPasswordStr
+            }
+        }
     }
 
     packaging {
@@ -96,6 +112,10 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -119,7 +139,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
             packageName = "Shushly"
-            packageVersion = "1.0.0"
+            packageVersion = "0.1.1"
             description = "Shushly - One-Click DNS Ad Blocker"
             copyright = "Copyright 2026 Shushly"
             vendor = "Shushly"
