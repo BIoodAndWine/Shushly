@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.shushly.app.presentation.theme.ShushlySapphire
+import org.jetbrains.compose.resources.painterResource
+import shushly.composeapp.generated.resources.Res
+import shushly.composeapp.generated.resources.shushly_logo
 
 @Composable
 fun ShushlyHeader(
@@ -37,32 +37,27 @@ fun ShushlyHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            Image(
+                painter = painterResource(Res.drawable.shushly_logo),
+                contentDescription = "Shushly Logo",
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(ShushlySapphire),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = "Shushly Shield",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+                    .size(38.dp)
+                    .clip(CircleShape)
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Shushly",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
+                letterSpacing = (-0.5).sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -70,13 +65,15 @@ fun ShushlyHeader(
         IconButton(
             onClick = onSettingsClick,
             modifier = Modifier
-                .size(44.dp)
+                .size(42.dp)
                 .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
             )
         }
     }

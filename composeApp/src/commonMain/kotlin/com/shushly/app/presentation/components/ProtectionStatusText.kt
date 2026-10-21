@@ -46,6 +46,7 @@ fun ProtectionStatusText(
             text = status.displayText,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.4).sp,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
@@ -61,13 +62,13 @@ fun ProtectionStatusText(
 
         AnimatedVisibility(
             visible = status.state == StatusState.CONNECTED,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(200))
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(180))
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
@@ -84,7 +85,7 @@ fun ProtectionStatusText(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (status.isCustomResolver) "Custom Resolver Active" else "${status.activeLevel.title} Mode Active",
+                        text = if (status.isCustomResolver) "Custom DNS Active" else "${status.activeLevel.title} Mode Active",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

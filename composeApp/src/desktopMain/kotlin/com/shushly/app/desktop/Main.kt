@@ -1,7 +1,6 @@
 package com.shushly.app.desktop
 
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -11,6 +10,9 @@ import androidx.compose.ui.window.application
 import com.shushly.app.App
 import com.shushly.app.data.repository.SettingsRepository
 import com.shushly.app.desktop.engine.WindowsDnsProtectionController
+import org.jetbrains.compose.resources.painterResource
+import shushly.composeapp.generated.resources.Res
+import shushly.composeapp.generated.resources.shushly_logo
 
 fun main() = application {
     val settingsRepository = SettingsRepository()
@@ -19,11 +21,12 @@ fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "Shushly",
+        icon = painterResource(Res.drawable.shushly_logo),
         state = WindowState(
             position = WindowPosition(Alignment.Center),
-            size = DpSize(440.dp, 760.dp)
+            size = DpSize(440.dp, 680.dp)
         ),
-        resizable = false
+        resizable = true
     ) {
         App(
             protectionController = protectionController,

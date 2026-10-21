@@ -68,6 +68,30 @@ class AndroidSoundPlayer(private val context: Context? = null) : SoundPlayer {
                 soundPool.play(soundId, 0.7f, 0.7f, 1, 0, 1.0f)
             } catch (_: Throwable) {}
         }
+        if (sound == SoundType.TOGGLE_ON || sound == SoundType.TOGGLE_OFF || sound == SoundType.MODE_CHANGE) {
+            triggerHaptic()
+        }
+    }
+
+    private fun triggerHaptic() {
+        try {
+            val ctx = getContext() ?: return
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vibratorManager = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(
+                    android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = ctx.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    vibrator?.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(15)
+                }
+            }
+        } catch (_: Throwable) {}
     }
 
     override fun release() {

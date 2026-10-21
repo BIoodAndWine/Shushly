@@ -25,7 +25,7 @@ class SettingsRepository(
     private val _entitlement = MutableStateFlow(loadEntitlement())
     val entitlement: StateFlow<PremiumEntitlement> = _entitlement.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(settings.getString(KEY_THEME_MODE, "dark"))
+    private val _themeMode = MutableStateFlow(settings.getString(KEY_THEME_MODE, "system"))
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     private val _soundEnabled = MutableStateFlow(settings.getBoolean(KEY_SOUND_ENABLED, true))
@@ -107,10 +107,17 @@ class SettingsRepository(
         // Obsolete: All advanced features unlocked forever
     }
 
+    fun resetAllSettings() {
+        settings.clear()
+        _configuration.value = DnsConfiguration()
+        _themeMode.value = "system"
+        _soundEnabled.value = true
+    }
+
     companion object {
-        private const val KEY_CONFIG = "shushly_dns_config_v1"
-        private const val KEY_ENTITLEMENT = "shushly_premium_entitlement_v1"
-        private const val KEY_THEME_MODE = "shushly_theme_mode"
-        private const val KEY_SOUND_ENABLED = "shushly_sound_enabled"
+        const val KEY_CONFIG = "shushly_dns_config_v1"
+        const val KEY_ENTITLEMENT = "shushly_premium_entitlement_v1"
+        const val KEY_THEME_MODE = "shushly_theme_mode"
+        const val KEY_SOUND_ENABLED = "shushly_sound_enabled"
     }
 }

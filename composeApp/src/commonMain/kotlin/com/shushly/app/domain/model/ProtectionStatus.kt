@@ -31,18 +31,18 @@ data class ProtectionStatus(
     val displayText: String
         get() = when (state) {
             StatusState.DISABLED -> "Protection is Off"
-            StatusState.CONNECTING -> "Connecting..."
-            StatusState.CONNECTED -> "Protection is On"
-            StatusState.RECONNECTING -> "Reconnecting..."
-            StatusState.ERROR -> "Couldn't connect. Try again."
+            StatusState.CONNECTING -> "Connecting…"
+            StatusState.CONNECTED -> "You're Protected"
+            StatusState.RECONNECTING -> "Reconnecting…"
+            StatusState.ERROR -> "Connection Failed"
         }
 
     val displaySubtitle: String
         get() = when (state) {
-            StatusState.DISABLED -> "Tap below to block ads and trackers"
-            StatusState.CONNECTING -> "Securing your connection..."
+            StatusState.DISABLED -> "Turn on to block ads and trackers"
+            StatusState.CONNECTING -> "Setting up your protection"
             StatusState.CONNECTED -> "Ads and trackers are being blocked"
-            StatusState.RECONNECTING -> "Network changed. Resuming protection..."
-            StatusState.ERROR -> errorMessage ?: "Connection failed. Please check network settings."
+            StatusState.RECONNECTING -> "Restoring protection"
+            StatusState.ERROR -> errorMessage ?: "Tap to try again"
         }
 }

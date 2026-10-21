@@ -45,7 +45,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun ShushlyTheme(
-    themeMode: String = "dark",
+    themeMode: String = "system",
     content: @Composable () -> Unit
 ) {
     val isDark = when (themeMode.lowercase()) {

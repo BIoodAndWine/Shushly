@@ -154,6 +154,7 @@ class DnsTests {
     @Test
     fun testSetProtectionLevelUpdatesActiveLevelAndResetsCustom() {
         val repo = SettingsRepository()
+        repo.resetAllSettings()
 
         // Select LIGHT mode
         repo.setProtectionLevel(ProtectionLevel.LIGHT)
@@ -193,8 +194,35 @@ class DnsTests {
     }
 
     @Test
+    fun testProtectionStatusDisplayMessaging() {
+        val disabled = ProtectionStatus(state = StatusState.DISABLED)
+        assertEquals("Protection is Off", disabled.displayText)
+        assertEquals("Turn on to block ads and trackers", disabled.displaySubtitle)
+
+        val connecting = ProtectionStatus(state = StatusState.CONNECTING)
+        assertEquals("Connecting…", connecting.displayText)
+        assertEquals("Setting up your protection", connecting.displaySubtitle)
+
+        val connected = ProtectionStatus(state = StatusState.CONNECTED)
+        assertEquals("You're Protected", connected.displayText)
+        assertEquals("Ads and trackers are being blocked", connected.displaySubtitle)
+
+        val error = ProtectionStatus(state = StatusState.ERROR)
+        assertEquals("Connection Failed", error.displayText)
+        assertEquals("Tap to try again", error.displaySubtitle)
+    }
+
+    @Test
+    fun testThemeModeDefaultIsSystem() {
+        val repo = SettingsRepository()
+        repo.resetAllSettings()
+        assertEquals("system", repo.themeMode.value)
+    }
+
+    @Test
     fun testSoundSettingsPersistence() {
         val repo = SettingsRepository()
+        repo.resetAllSettings()
         repo.setSoundEnabled(false)
         assertFalse(repo.soundEnabled.value)
         repo.setSoundEnabled(true)

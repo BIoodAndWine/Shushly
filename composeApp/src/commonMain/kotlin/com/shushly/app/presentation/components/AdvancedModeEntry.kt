@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -34,10 +35,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.shushly.app.presentation.theme.DarkBorder
 import com.shushly.app.presentation.theme.ShushlyEmerald
 import com.shushly.app.presentation.theme.ShushlySapphire
 
+/**
+ * Refined, compact navigation row for Advanced Mode entry.
+ * Understated surface that avoids cluttering the home screen.
+ */
 @Composable
 fun AdvancedModeEntry(
     isCustomConfig: Boolean,
@@ -52,27 +56,30 @@ fun AdvancedModeEntry(
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
             stiffness = Spring.StiffnessMediumLow
-        )
+        ),
+        label = "AdvancedEntryScale"
     )
+
+    val rowShape = RoundedCornerShape(14.dp)
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
+            .fillMaxWidth(0.92f)
+            .widthIn(max = 420.dp)
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clip(rowShape)
+            .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = 1.dp,
-                color = if (isCustomConfig) ShushlySapphire.copy(alpha = 0.5f) else DarkBorder,
-                shape = RoundedCornerShape(16.dp)
+                color = if (isCustomConfig) ShushlySapphire.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline,
+                shape = rowShape
             )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -85,34 +92,34 @@ fun AdvancedModeEntry(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(
-                            if (isCustomConfig) ShushlyEmerald.copy(alpha = 0.15f)
-                            else ShushlySapphire.copy(alpha = 0.12f)
+                            if (isCustomConfig) ShushlyEmerald.copy(alpha = 0.12f)
+                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
-                        contentDescription = "Advanced Mode",
-                        tint = if (isCustomConfig) ShushlyEmerald else ShushlySapphire,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = "Advanced Mode Icon",
+                        tint = if (isCustomConfig) ShushlyEmerald else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column {
                     Text(
                         text = if (isCustomConfig) "Advanced Mode Active" else "Advanced Mode",
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isCustomConfig) "Custom primary and backup resolvers in use" else "Custom DNS, backup failover & latency test",
-                        fontSize = 13.sp,
+                        text = if (isCustomConfig) "Custom DNS and connection active" else "Customize DNS and connection settings",
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -122,7 +129,7 @@ fun AdvancedModeEntry(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Open Advanced Mode",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }

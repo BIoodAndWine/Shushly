@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -16,20 +17,19 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PowerSettingsNew
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,20 +37,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.shushly.app.domain.model.ProtectionStatus
 import com.shushly.app.domain.model.StatusState
 import com.shushly.app.presentation.theme.DarkBorder
 import com.shushly.app.presentation.theme.ShushlyAmber
 import com.shushly.app.presentation.theme.ShushlyCrimson
-import com.shushly.app.presentation.theme.ShushlyEmerald
-import com.shushly.app.presentation.theme.ShushlyEmeraldGlow
 import com.shushly.app.presentation.theme.ShushlySapphire
+import com.shushly.app.presentation.theme.ShushlySapphireDark
 import com.shushly.app.presentation.theme.ShushlySapphireLight
 
+/**
+ * Clean, prominent horizontal pill toggle inspired by Cloudflare WARP,
+ * styled specifically with Shushly's brand identity.
+ *
+ * Dimensions: 144dp width x 74dp height, with a 62dp circular thumb
+ * that slides smoothly using natural spring physics.
+ */
 @Composable
 fun ProtectionToggle(
     status: ProtectionStatus,
@@ -60,161 +68,164 @@ fun ProtectionToggle(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // Smooth press feedback with tactile spring physics
+    // Tactile press response with spring physics
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.93f else 1.0f,
+        targetValue = if (isPressed) 0.95f else 1.0f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
+            dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow
-        )
+        ),
+        label = "PressScale"
     )
 
-    // Animated colors based on status
-    val ringColor by animateColorAsState(
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    // Track background color based on connection state
+    val trackColor by animateColorAsState(
         targetValue = when (status.state) {
-            StatusState.CONNECTED -> ShushlyEmerald
+            StatusState.CONNECTED -> ShushlySapphire
+            StatusState.CONNECTING -> if (isDark) ShushlySapphireDark else ShushlySapphireLight
+            StatusState.RECONNECTING -> ShushlyAmber
+            StatusState.ERROR -> ShushlyCrimson
+            StatusState.DISABLED -> if (isDark) Color(0xFF192231) else Color(0xFFE2E8F0)
+        },
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+        label = "TrackColor"
+    )
+
+    // Track border for definition when disabled
+    val trackBorderColor by animateColorAsState(
+        targetValue = when (status.state) {
+            StatusState.CONNECTED -> ShushlySapphireDark
             StatusState.CONNECTING -> ShushlySapphireLight
             StatusState.RECONNECTING -> ShushlyAmber
             StatusState.ERROR -> ShushlyCrimson
-            StatusState.DISABLED -> DarkBorder
+            StatusState.DISABLED -> if (isDark) DarkBorder else Color(0xFFCBD5E1)
         },
-        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+        animationSpec = tween(durationMillis = 280),
+        label = "TrackBorder"
     )
 
-    // Surface-adaptive background
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val innerBackgroundColor by animateColorAsState(
-        targetValue = when (status.state) {
-            StatusState.CONNECTED -> if (isDark) Color(0xFF0D251D) else Color(0xFFD1FAE5)
-            StatusState.CONNECTING -> if (isDark) Color(0xFF132238) else Color(0xFFDBEAFE)
-            StatusState.RECONNECTING -> if (isDark) Color(0xFF281F10) else Color(0xFFFEF3C7)
-            StatusState.ERROR -> if (isDark) Color(0xFF281014) else Color(0xFFFEE2E2)
-            StatusState.DISABLED -> MaterialTheme.colorScheme.surfaceVariant
-        },
-        animationSpec = tween(durationMillis = 280)
+    // Thumb position offset:
+    // Track width: 144dp, Track padding: 6dp -> Inner width: 132dp.
+    // Thumb size: 62dp.
+    // Travel distance = 132dp - 62dp = 70dp.
+    val isTargetOn = status.state == StatusState.CONNECTED || status.state == StatusState.CONNECTING
+    val thumbOffsetTarget = if (isTargetOn) 70.dp else 0.dp
+
+    val thumbOffset by animateDpAsState(
+        targetValue = thumbOffsetTarget,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "ThumbOffset"
     )
 
-    val iconColor by animateColorAsState(
-        targetValue = when (status.state) {
-            StatusState.CONNECTED -> if (isDark) ShushlyEmerald else Color(0xFF047857)
-            StatusState.CONNECTING -> if (isDark) ShushlySapphireLight else ShushlySapphire
-            StatusState.RECONNECTING -> ShushlyAmber
-            StatusState.ERROR -> ShushlyCrimson
-            StatusState.DISABLED -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        },
-        animationSpec = tween(durationMillis = 280)
-    )
-
-    // Pulsing halo for connecting / reconnecting states
-    val infiniteTransition = rememberInfiniteTransition()
-    val haloPulse by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.12f,
+    // Gentle halo transition for connecting state
+    val infiniteTransition = rememberInfiniteTransition(label = "ConnectingTransition")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.40f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(900, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "PulseAlpha"
     )
 
-    val haloAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        )
-    )
+    val trackShape = RoundedCornerShape(37.dp)
 
     Box(
-        modifier = modifier.size(240.dp),
-        contentAlignment = Alignment.Center
+        modifier = modifier
+            .scale(pressScale)
+            .semantics { role = Role.Switch }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onToggle
+            ),
+        contentAlignment = Alignment.CenterStart
     ) {
-        // Outer pulsing ring during transition or active state
-        if (status.isTransitioning) {
+        // Outer glow when connecting or protected
+        if (status.state == StatusState.CONNECTING) {
             Box(
                 modifier = Modifier
-                    .size(220.dp)
-                    .scale(haloPulse)
-                    .clip(CircleShape)
-                    .background(
-                        if (status.state == StatusState.CONNECTING) ShushlySapphire.copy(alpha = haloAlpha)
-                        else ShushlyAmber.copy(alpha = haloAlpha)
-                    )
-            )
-        } else if (status.isProtected) {
-            Box(
-                modifier = Modifier
-                    .size(210.dp)
-                    .clip(CircleShape)
-                    .background(ShushlyEmeraldGlow)
+                    .size(width = 152.dp, height = 82.dp)
+                    .clip(RoundedCornerShape(41.dp))
+                    .background(ShushlySapphireLight.copy(alpha = pulseAlpha))
             )
         }
 
-        // Main Button Surface
+        // Track surface
         Box(
             modifier = Modifier
-                .size(190.dp)
-                .scale(pressScale)
-                .clip(CircleShape)
-                .background(innerBackgroundColor)
+                .size(width = 144.dp, height = 74.dp)
+                .clip(trackShape)
+                .background(trackColor)
                 .border(
-                    width = if (status.isProtected || status.isTransitioning) 3.dp else 1.5.dp,
-                    color = ringColor,
-                    shape = CircleShape
+                    width = if (status.state == StatusState.DISABLED) 1.5.dp else 1.dp,
+                    color = trackBorderColor,
+                    shape = trackShape
                 )
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onToggle
-                ),
-            contentAlignment = Alignment.Center
+                .padding(6.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Floating Thumb
+            Box(
+                modifier = Modifier
+                    .offset(x = thumbOffset)
+                    .size(62.dp)
+                    .shadow(elevation = 6.dp, shape = CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
             ) {
-                if (status.isTransitioning) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(44.dp),
-                        color = ringColor,
-                        strokeWidth = 3.dp
-                    )
-                } else if (status.state == StatusState.ERROR) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Connection Error",
-                        tint = iconColor,
-                        modifier = Modifier.size(48.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.PowerSettingsNew,
-                        contentDescription = if (status.isProtected) "Disable Protection" else "Enable Protection",
-                        tint = iconColor,
-                        modifier = Modifier.size(54.dp)
-                    )
+                when (status.state) {
+                    StatusState.CONNECTED -> {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Connected",
+                            tint = ShushlySapphire,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    StatusState.CONNECTING -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = ShushlySapphire,
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                    StatusState.RECONNECTING -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = ShushlyAmber,
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                    StatusState.ERROR -> {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Retry Connection",
+                            tint = ShushlyCrimson,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    StatusState.DISABLED -> {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = "Protection Off",
+                            tint = Color(0xFF64748B),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = when (status.state) {
-                        StatusState.CONNECTED -> "ON"
-                        StatusState.CONNECTING -> "CONNECTING"
-                        StatusState.RECONNECTING -> "RESUMING"
-                        StatusState.ERROR -> "RETRY"
-                        StatusState.DISABLED -> "OFF"
-                    },
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp,
-                    color = iconColor
-                )
             }
         }
     }
 }
 
-// Luminance helper extension for Compose Color
 private fun Color.luminance(): Float {
     return (0.299f * red + 0.587f * green + 0.114f * blue)
 }
