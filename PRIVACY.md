@@ -66,4 +66,4 @@ Shushly is completely open source under the MIT License. You can verify our priv
 
 ## 6. Contact & Questions
 
-If you have questions about privacy in Shushly, please open a GitHub Discussion or submit an issue in our repository.
+If you have questions about privacy in Shushly, please open a discussion in [GitHub Discussions](https://github.com/BIoodAndWine/Shushly/discussions) or contact the project maintainer directly at [contact@karlmolles.com](mailto:contact@karlmolles.com).

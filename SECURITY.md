@@ -31,7 +31,7 @@ If you believe you have discovered a security vulnerability in Shushly:
 
 1. **Do not disclose the issue publicly** (e.g., in a public GitHub issue, forum, or social media).
 2. Report the vulnerability privately using **GitHub Private Vulnerability Reporting** via the [Security Advisories](https://github.com/BIoodAndWine/Shushly/security/advisories) tab of this repository.
-3. If Private Vulnerability Reporting is unavailable, send an email to `security@shushly.app` (or contact the maintainers via GitHub).
+3. If Private Vulnerability Reporting is unavailable, send an email to [contact@karlmolles.com](mailto:contact@karlmolles.com).
 
 ### What to Include in Your Report
 
@@ -41,8 +41,6 @@ To help us triage and resolve the issue quickly, please include:
 - Step-by-step reproduction instructions or a minimal Proof of Concept (PoC).
 - Any proposed mitigations or fixes.
 
-### Response Timeline
+### Response Expectations
 
-- **Initial Response:** Within 48 hours of receipt.
-- **Triage & Assessment:** Within 7 business days.
-- **Resolution & Coordinated Disclosure:** We aim to release a patch within 30 days of confirmed triage, coordinating the release date with the reporter.
+Shushly is maintained as an independent open-source project by a solo maintainer. Vulnerability reports are taken seriously and will be reviewed and acknowledged on a best-effort basis as promptly as possible. Once verified, security fixes will be developed, tested, and released through standard GitHub Releases in coordination with the reporter.

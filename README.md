@@ -178,6 +178,16 @@ Shushly does not host DNS servers. We proudly route queries to independent, priv
 
 ---
 
+## Maintainer & Contact
+
+Developed and maintained by Karl Molles.
+
+- **Website:** [karlmolles.com](https://karlmolles.com/)
+- **Contact:** [contact@karlmolles.com](mailto:contact@karlmolles.com)
+- **Discussions:** [GitHub Discussions](https://github.com/BIoodAndWine/Shushly/discussions)
+
+---
+
 ## License
 
 Shushly is open-source software licensed under the **[MIT License](LICENSE)**.

@@ -246,7 +246,9 @@ fun SettingsScreen(
                         "• Balanced: Control D OISD Full\n" +
                         "• Strict: Control D HaGeZi Pro\n" +
                         "• Advanced Mode: Custom primary/secondary DNS, regional recommendations, and speed testing.\n\n" +
-                        "Version ${uiState.appVersion}"
+                        "Version ${uiState.appVersion}\n\n" +
+                        "Website: karlmolles.com\n" +
+                        "Contact: contact@karlmolles.com"
                     )
                 }
             },

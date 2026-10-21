@@ -59,7 +59,7 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders at `community@shushly.app` or via the repository maintainers. All complaints will be reviewed and investigated promptly and fairly.
+reported to the project maintainer at [contact@karlmolles.com](mailto:contact@karlmolles.com) or through the repository maintainers. Reports will be reviewed fairly and handled with appropriate confidentiality.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
