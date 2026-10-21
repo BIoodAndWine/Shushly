@@ -1,0 +1,108 @@
+name: Shushly Continuous Integration
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-and-verify:
+    name: Unit & DoH Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Desktop & Domain Tests
+        run: ./gradlew :composeApp:desktopTest --no-daemon
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: composeApp/build/reports/tests/
+
+  build-android:
+    name: Build Android APK
+    needs: test-and-verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Android Debug APK
+        run: ./gradlew :composeApp:assembleDebug --no-daemon
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shushly-Android-APK
+          path: composeApp/build/outputs/apk/debug/composeApp-debug.apk
+
+  build-windows:
+    name: Build Windows Desktop & Installer
+    needs: test-and-verify
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build Windows Distributable & MSI
+        run: .\gradlew.bat :composeApp:createDistributable :composeApp:packageMsi --no-daemon
+
+      - name: Upload Windows MSI Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shushly-Windows-MSI
+          path: composeApp/build/compose/binaries/main/msi/*.msi
+
+  build-macos-ios:
+    name: Build macOS & iOS Native Framework
+    needs: test-and-verify
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Shared Kotlin Multiplatform Framework
+        run: ./gradlew :composeApp:compileKotlinDesktop --no-daemon
