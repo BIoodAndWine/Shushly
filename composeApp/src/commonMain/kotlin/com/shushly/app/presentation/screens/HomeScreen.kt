@@ -1,5 +1,6 @@
 package com.shushly.app.presentation.screens
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,14 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val systemDark = isSystemInDarkTheme()
+    val isDark = when (themeMode.lowercase()) {
+        "light" -> false
+        "dark" -> true
+        else -> systemDark
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.feedbackMessage) {
@@ -55,7 +64,11 @@ fun HomeScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            ShushlyHeader(onSettingsClick = onNavigateToSettings)
+            ShushlyHeader(
+                isDark = isDark,
+                onToggleTheme = { viewModel.toggleTheme(isDark) },
+                onSettingsClick = onNavigateToSettings
+            )
         }
     ) { innerPadding ->
         Box(

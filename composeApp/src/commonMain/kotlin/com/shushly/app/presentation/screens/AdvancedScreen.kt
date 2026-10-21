@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shushly.app.domain.model.DnsProvider
 import com.shushly.app.domain.model.Region
-import com.shushly.app.presentation.theme.DarkBorder
 import com.shushly.app.presentation.theme.ShushlyCrimson
 import com.shushly.app.presentation.theme.ShushlyEmerald
 import com.shushly.app.presentation.theme.ShushlySapphire
@@ -169,7 +168,7 @@ fun AdvancedScreen(
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) ShushlySapphire else DarkBorder,
+                                color = if (isSelected) ShushlySapphire else MaterialTheme.colorScheme.outline,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { viewModel.setRegion(region) }
@@ -198,7 +197,7 @@ fun AdvancedScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -237,7 +236,7 @@ fun AdvancedScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -475,7 +474,7 @@ private fun DnsSlotCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
         Column {
@@ -540,7 +539,7 @@ private fun DnsSlotCard(
                         contentColor = MaterialTheme.colorScheme.onBackground
                     ),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.border(1.dp, DarkBorder, RoundedCornerShape(10.dp))
+                    modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
                 ) {
                     Text("Change", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }

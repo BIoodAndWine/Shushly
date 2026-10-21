@@ -1,10 +1,14 @@
 package com.shushly.app.presentation.theme
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
@@ -54,10 +58,31 @@ fun ShushlyTheme(
         else -> isSystemInDarkTheme()
     }
 
-    val colorScheme = if (isDark) DarkColorScheme else LightColorScheme
+    val targetColors = if (isDark) DarkColorScheme else LightColorScheme
+    val animationSpec = tween<Color>(durationMillis = 280, easing = FastOutSlowInEasing)
+
+    val animatedBackground by animateColorAsState(targetColors.background, animationSpec, label = "ThemeBackground")
+    val animatedSurface by animateColorAsState(targetColors.surface, animationSpec, label = "ThemeSurface")
+    val animatedSurfaceVariant by animateColorAsState(targetColors.surfaceVariant, animationSpec, label = "ThemeSurfaceVariant")
+    val animatedOnBackground by animateColorAsState(targetColors.onBackground, animationSpec, label = "ThemeOnBackground")
+    val animatedOnSurface by animateColorAsState(targetColors.onSurface, animationSpec, label = "ThemeOnSurface")
+    val animatedOnSurfaceVariant by animateColorAsState(targetColors.onSurfaceVariant, animationSpec, label = "ThemeOnSurfaceVariant")
+    val animatedPrimary by animateColorAsState(targetColors.primary, animationSpec, label = "ThemePrimary")
+    val animatedOutline by animateColorAsState(targetColors.outline, animationSpec, label = "ThemeOutline")
+
+    val animatedColorScheme = targetColors.copy(
+        background = animatedBackground,
+        surface = animatedSurface,
+        surfaceVariant = animatedSurfaceVariant,
+        onBackground = animatedOnBackground,
+        onSurface = animatedOnSurface,
+        onSurfaceVariant = animatedOnSurfaceVariant,
+        primary = animatedPrimary,
+        outline = animatedOutline
+    )
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = animatedColorScheme,
         content = content
     )
 }

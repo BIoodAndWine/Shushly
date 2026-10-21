@@ -129,4 +129,11 @@ class HomeViewModel(
     fun clearFeedback() {
         _feedbackMessage.value = null
     }
+
+    val themeMode: StateFlow<String> = settingsRepository.themeMode
+
+    fun toggleTheme(isCurrentlyDark: Boolean) {
+        val next = if (isCurrentlyDark) "light" else "dark"
+        settingsRepository.setThemeMode(next)
+    }
 }

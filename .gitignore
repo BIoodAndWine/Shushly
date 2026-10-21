@@ -1,12 +1,52 @@
+# Gradle
+.gradle/
+build/
+/*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin Multiplatform
+.kotlin/
+
+# Android Studio & IntelliJ IDEA
+.idea/
 *.iml
-.gradle
-/build
-/*/build
-.idea
+*.iws
+*.ipr
+out/
+local.properties
+.navigation/
+captures/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Visual Studio Code
+.vscode/
+
+# OS specific files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Build artifacts & packages
 *.apk
+*.ap_
 *.aab
 *.msi
 *.exe
-local.properties
-.kotlin
+
+# Keystores & sensitive credentials
+*.jks
+*.keystore
+*.pfx
+*.p12
+
+# Log files
+*.log

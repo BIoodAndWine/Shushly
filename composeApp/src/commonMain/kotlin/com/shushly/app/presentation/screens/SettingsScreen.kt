@@ -45,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.shushly.app.presentation.theme.DarkBorder
 import com.shushly.app.presentation.theme.ShushlySapphire
 import com.shushly.app.presentation.viewmodel.SettingsViewModel
 
@@ -133,37 +132,43 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "Theme",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Dark", "Light", "System").forEach { theme ->
-                        val isSelected = uiState.themeMode.equals(theme, ignoreCase = true)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) ShushlySapphire else MaterialTheme.colorScheme.surface)
-                                .clickable { viewModel.setThemeMode(theme.lowercase()) }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = theme,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Follow System Appearance",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = if (uiState.themeMode.equals("system", ignoreCase = true))
+                            "Automatically adapting to system dark/light theme"
+                        else
+                            "Currently locked to ${uiState.themeMode.replaceFirstChar { it.uppercase() }} mode",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
+
+                val isSystem = uiState.themeMode.equals("system", ignoreCase = true)
+                Switch(
+                    checked = isSystem,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            viewModel.setThemeMode("system")
+                        } else {
+                            viewModel.setThemeMode("dark")
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = ShushlySapphire
+                    )
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -278,7 +283,7 @@ private fun SettingsToggleRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
             .clickable { onCheckedChange(!checked) }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -323,7 +328,7 @@ private fun SettingsActionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
