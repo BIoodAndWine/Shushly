@@ -14,9 +14,9 @@ enum class StatusState {
 @Serializable
 data class ProtectionStatus(
     val state: StatusState = StatusState.DISABLED,
-    val activeLevel: ProtectionLevel = ProtectionLevel.BALANCED,
-    val activeResolverName: String = ProtectionLevel.BALANCED.filterName,
-    val activeResolverEndpoint: String = ProtectionLevel.BALANCED.dohUrl,
+    val activeLevel: ProtectionLevel = ProtectionLevel.LIGHT,
+    val activeResolverName: String = ProtectionLevel.LIGHT.filterName,
+    val activeResolverEndpoint: String = ProtectionLevel.LIGHT.dohUrl,
     val isCustomResolver: Boolean = false,
     val errorMessage: String? = null,
     val connectedSinceEpochMs: Long? = null,

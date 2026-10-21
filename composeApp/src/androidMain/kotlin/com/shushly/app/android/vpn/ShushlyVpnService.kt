@@ -51,10 +51,10 @@ class ShushlyVpnService : VpnService() {
     private var isRunning = false
     private var packetLoopJob: Job? = null
 
-    private var activeDohUrl = ProtectionLevel.BALANCED.dohUrl
+    private var activeDohUrl = ProtectionLevel.LIGHT.dohUrl
     private var activeBackupDohUrl: String? = null
-    private var activeFilterName = ProtectionLevel.BALANCED.filterName
-    private var activeProtectionLevel = ProtectionLevel.BALANCED
+    private var activeFilterName = ProtectionLevel.LIGHT.filterName
+    private var activeProtectionLevel = ProtectionLevel.LIGHT
     private var isCustomResolver = false
 
     private val httpClient by lazy {
@@ -105,15 +105,15 @@ class ShushlyVpnService : VpnService() {
             return START_NOT_STICKY
         }
 
-        val dohUrl = intent?.getStringExtra(EXTRA_DOH_URL) ?: ProtectionLevel.BALANCED.dohUrl
+        val dohUrl = intent?.getStringExtra(EXTRA_DOH_URL) ?: ProtectionLevel.LIGHT.dohUrl
         val backupDohUrl = intent?.getStringExtra(EXTRA_BACKUP_DOH_URL)
-        val filterName = intent?.getStringExtra(EXTRA_FILTER_NAME) ?: ProtectionLevel.BALANCED.filterName
+        val filterName = intent?.getStringExtra(EXTRA_FILTER_NAME) ?: ProtectionLevel.LIGHT.filterName
         val levelName = intent?.getStringExtra(EXTRA_PROTECTION_LEVEL)
         val isCustom = intent?.getBooleanExtra(EXTRA_IS_CUSTOM, false) ?: false
 
         if (levelName != null) {
             try {
-                activeProtectionLevel = ProtectionLevel.valueOf(levelName)
+                activeProtectionLevel = ProtectionLevel.fromString(levelName)
             } catch (_: Exception) {}
         }
 

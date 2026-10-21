@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class DnsConfiguration(
     val isProtectionEnabled: Boolean = false,
-    val protectionLevel: ProtectionLevel = ProtectionLevel.BALANCED,
+    val protectionLevel: ProtectionLevel = ProtectionLevel.LIGHT,
     val isCustomConfig: Boolean = false,
     val primaryProviderId: String = "controld-oisd",
     val primaryCustomDohUrl: String? = null,

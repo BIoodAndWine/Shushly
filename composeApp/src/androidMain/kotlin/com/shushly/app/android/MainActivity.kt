@@ -76,7 +76,8 @@ class MainActivity : ComponentActivity() {
                         return protectionController.enableProtectionWithConfig(config)
                     }
                 },
-                settingsRepository = settingsRepository
+                settingsRepository = settingsRepository,
+                soundPlayer = androidx.compose.runtime.remember { com.shushly.app.domain.audio.AndroidSoundPlayer(this@MainActivity) }
             )
         }
     }

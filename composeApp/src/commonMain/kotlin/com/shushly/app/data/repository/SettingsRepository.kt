@@ -28,6 +28,9 @@ class SettingsRepository(
     private val _themeMode = MutableStateFlow(settings.getString(KEY_THEME_MODE, "dark"))
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
+    private val _soundEnabled = MutableStateFlow(settings.getBoolean(KEY_SOUND_ENABLED, true))
+    val soundEnabled: StateFlow<Boolean> = _soundEnabled.asStateFlow()
+
     fun updateConfiguration(newConfig: DnsConfiguration) {
         _configuration.value = newConfig
         saveConfiguration(newConfig)
@@ -56,6 +59,11 @@ class SettingsRepository(
         settings.putString(KEY_THEME_MODE, mode)
     }
 
+    fun setSoundEnabled(enabled: Boolean) {
+        _soundEnabled.value = enabled
+        settings.putBoolean(KEY_SOUND_ENABLED, enabled)
+    }
+
     private fun loadConfiguration(): DnsConfiguration {
         val raw = settings.getStringOrNull(KEY_CONFIG)
         if (raw != null) {
@@ -67,7 +75,7 @@ class SettingsRepository(
         }
         return DnsConfiguration(
             isProtectionEnabled = false,
-            protectionLevel = ProtectionLevel.BALANCED,
+            protectionLevel = ProtectionLevel.LIGHT,
             isCustomConfig = false,
             primaryProviderId = "controld-oisd",
             secondaryProviderId = "adguard",
@@ -87,29 +95,22 @@ class SettingsRepository(
     }
 
     private fun loadEntitlement(): PremiumEntitlement {
-        val raw = settings.getStringOrNull(KEY_ENTITLEMENT)
-        if (raw != null) {
-            try {
-                return json.decodeFromString(raw)
-            } catch (_: Exception) {
-                // Fallback to default free
-            }
-        }
-        return PremiumEntitlement.FREE_DEFAULT
+        return PremiumEntitlement(
+            isPremium = true,
+            purchaseToken = "shushly_unlocked",
+            purchaseTimestamp = 0L,
+            storeSource = "FreeAndOpen"
+        )
     }
 
     private fun saveEntitlement(entitlement: PremiumEntitlement) {
-        try {
-            val serialized = json.encodeToString(entitlement)
-            settings.putString(KEY_ENTITLEMENT, serialized)
-        } catch (_: Exception) {
-            // Safe fallback
-        }
+        // Obsolete: All advanced features unlocked forever
     }
 
     companion object {
         private const val KEY_CONFIG = "shushly_dns_config_v1"
         private const val KEY_ENTITLEMENT = "shushly_premium_entitlement_v1"
         private const val KEY_THEME_MODE = "shushly_theme_mode"
+        private const val KEY_SOUND_ENABLED = "shushly_sound_enabled"
     }
 }

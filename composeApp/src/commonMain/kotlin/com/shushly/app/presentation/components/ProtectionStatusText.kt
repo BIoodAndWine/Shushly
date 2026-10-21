@@ -1,6 +1,7 @@
 package com.shushly.app.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -60,8 +61,8 @@ fun ProtectionStatusText(
 
         AnimatedVisibility(
             visible = status.state == StatusState.CONNECTED,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(200))
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -83,7 +84,7 @@ fun ProtectionStatusText(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (status.isCustomResolver) "Custom Resolver Active" else status.activeLevel.title + " Mode",
+                        text = if (status.isCustomResolver) "Custom Resolver Active" else "${status.activeLevel.title} Mode Active",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

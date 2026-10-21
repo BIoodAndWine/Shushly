@@ -15,8 +15,9 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val configuration: DnsConfiguration = DnsConfiguration(),
-    val isPremium: Boolean = false,
+    val isPremium: Boolean = true,
     val themeMode: String = "dark",
+    val soundEnabled: Boolean = true,
     val appVersion: String = "1.0.0"
 )
 
@@ -27,13 +28,14 @@ class SettingsViewModel(
 
     val uiState: StateFlow<SettingsUiState> = combine(
         settingsRepository.configuration,
-        settingsRepository.entitlement,
-        settingsRepository.themeMode
-    ) { config, entitlement, theme ->
+        settingsRepository.themeMode,
+        settingsRepository.soundEnabled
+    ) { config, theme, sound ->
         SettingsUiState(
             configuration = config,
-            isPremium = entitlement.isPremium,
+            isPremium = true,
             themeMode = theme,
+            soundEnabled = sound,
             appVersion = "1.0.0"
         )
     }.stateIn(
@@ -56,11 +58,15 @@ class SettingsViewModel(
         settingsRepository.setThemeMode(mode)
     }
 
+    fun setSoundEnabled(enabled: Boolean) {
+        settingsRepository.setSoundEnabled(enabled)
+    }
+
     fun restoreDefaultConfiguration() {
         viewModelScope.launch {
             val defaultConfig = DnsConfiguration(
                 isProtectionEnabled = false,
-                protectionLevel = ProtectionLevel.BALANCED,
+                protectionLevel = ProtectionLevel.LIGHT,
                 isCustomConfig = false,
                 primaryProviderId = "controld-oisd",
                 secondaryProviderId = "adguard",

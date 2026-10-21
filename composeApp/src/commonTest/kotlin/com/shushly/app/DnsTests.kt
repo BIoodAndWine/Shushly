@@ -10,6 +10,7 @@ import com.shushly.app.domain.model.ProtectionStatus
 import com.shushly.app.domain.model.Region
 import com.shushly.app.domain.model.StatusState
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -18,11 +19,37 @@ import kotlin.test.assertTrue
 
 class DnsTests {
 
+    private val json = Json { ignoreUnknownKeys = true }
+
     @Test
     fun testProtectionLevelsEndpointsMatchSpecification() {
-        assertEquals("https://freedns.controld.com/p2", ProtectionLevel.DEFAULT.dohUrl)
+        assertEquals("https://freedns.controld.com/p2", ProtectionLevel.LIGHT.dohUrl)
         assertEquals("https://freedns.controld.com/x-oisd", ProtectionLevel.BALANCED.dohUrl)
-        assertEquals("https://freedns.controld.com/x-hagezi-pro", ProtectionLevel.STRONG.dohUrl)
+        assertEquals("https://freedns.controld.com/x-hagezi-pro", ProtectionLevel.STRICT.dohUrl)
+    }
+
+    @Test
+    fun testProtectionLevelMigrationFromLegacyNames() {
+        assertEquals(ProtectionLevel.LIGHT, ProtectionLevel.fromString("DEFAULT"))
+        assertEquals(ProtectionLevel.LIGHT, ProtectionLevel.fromString("default"))
+        assertEquals(ProtectionLevel.LIGHT, ProtectionLevel.fromString("LIGHT"))
+        assertEquals(ProtectionLevel.BALANCED, ProtectionLevel.fromString("BALANCED"))
+        assertEquals(ProtectionLevel.STRICT, ProtectionLevel.fromString("STRONG"))
+        assertEquals(ProtectionLevel.STRICT, ProtectionLevel.fromString("strong"))
+        assertEquals(ProtectionLevel.STRICT, ProtectionLevel.fromString("STRICT"))
+    }
+
+    @Test
+    fun testJsonMigrationFromLegacyConfigurationPayloads() {
+        // Legacy saved JSON with DEFAULT
+        val legacyDefaultJson = """{"isProtectionEnabled":false,"protectionLevel":"DEFAULT"}"""
+        val configDefault = json.decodeFromString<DnsConfiguration>(legacyDefaultJson)
+        assertEquals(ProtectionLevel.LIGHT, configDefault.protectionLevel)
+
+        // Legacy saved JSON with STRONG
+        val legacyStrongJson = """{"isProtectionEnabled":true,"protectionLevel":"STRONG"}"""
+        val configStrong = json.decodeFromString<DnsConfiguration>(legacyStrongJson)
+        assertEquals(ProtectionLevel.STRICT, configStrong.protectionLevel)
     }
 
     @Test
@@ -88,10 +115,10 @@ class DnsTests {
         val repo = DnsDirectoryRepository()
         val config = DnsConfiguration(
             isProtectionEnabled = true,
-            protectionLevel = ProtectionLevel.STRONG,
+            protectionLevel = ProtectionLevel.STRICT,
             isCustomConfig = false
         )
-        assertEquals(ProtectionLevel.STRONG.dohUrl, config.getEffectivePrimaryDohUrl(repo.providers))
+        assertEquals(ProtectionLevel.STRICT.dohUrl, config.getEffectivePrimaryDohUrl(repo.providers))
 
         val customConfig = DnsConfiguration(
             isProtectionEnabled = true,
@@ -128,35 +155,49 @@ class DnsTests {
     fun testSetProtectionLevelUpdatesActiveLevelAndResetsCustom() {
         val repo = SettingsRepository()
 
-        // Select DEFAULT mode
-        repo.setProtectionLevel(ProtectionLevel.DEFAULT)
-        assertEquals(ProtectionLevel.DEFAULT, repo.configuration.value.protectionLevel)
+        // Select LIGHT mode
+        repo.setProtectionLevel(ProtectionLevel.LIGHT)
+        assertEquals(ProtectionLevel.LIGHT, repo.configuration.value.protectionLevel)
         assertFalse(repo.configuration.value.isCustomConfig)
 
-        // Select STRONG mode
-        repo.setProtectionLevel(ProtectionLevel.STRONG)
-        assertEquals(ProtectionLevel.STRONG, repo.configuration.value.protectionLevel)
+        // Select STRICT mode
+        repo.setProtectionLevel(ProtectionLevel.STRICT)
+        assertEquals(ProtectionLevel.STRICT, repo.configuration.value.protectionLevel)
+        assertFalse(repo.configuration.value.isCustomConfig)
+
+        // Select BALANCED mode
+        repo.setProtectionLevel(ProtectionLevel.BALANCED)
+        assertEquals(ProtectionLevel.BALANCED, repo.configuration.value.protectionLevel)
         assertFalse(repo.configuration.value.isCustomConfig)
     }
 
     @Test
     fun testProtectionStatusPreservesActiveLevel() {
-        val statusStrong = ProtectionStatus(
+        val statusStrict = ProtectionStatus(
             state = StatusState.CONNECTED,
-            activeLevel = ProtectionLevel.STRONG,
-            activeResolverName = ProtectionLevel.STRONG.filterName,
-            activeResolverEndpoint = ProtectionLevel.STRONG.dohUrl
+            activeLevel = ProtectionLevel.STRICT,
+            activeResolverName = ProtectionLevel.STRICT.filterName,
+            activeResolverEndpoint = ProtectionLevel.STRICT.dohUrl
         )
-        assertEquals(ProtectionLevel.STRONG, statusStrong.activeLevel)
-        assertEquals(ProtectionLevel.STRONG.filterName, statusStrong.activeResolverName)
+        assertEquals(ProtectionLevel.STRICT, statusStrict.activeLevel)
+        assertEquals(ProtectionLevel.STRICT.filterName, statusStrict.activeResolverName)
 
-        val statusDefault = ProtectionStatus(
+        val statusLight = ProtectionStatus(
             state = StatusState.CONNECTED,
-            activeLevel = ProtectionLevel.DEFAULT,
-            activeResolverName = ProtectionLevel.DEFAULT.filterName,
-            activeResolverEndpoint = ProtectionLevel.DEFAULT.dohUrl
+            activeLevel = ProtectionLevel.LIGHT,
+            activeResolverName = ProtectionLevel.LIGHT.filterName,
+            activeResolverEndpoint = ProtectionLevel.LIGHT.dohUrl
         )
-        assertEquals(ProtectionLevel.DEFAULT, statusDefault.activeLevel)
-        assertEquals(ProtectionLevel.DEFAULT.filterName, statusDefault.activeResolverName)
+        assertEquals(ProtectionLevel.LIGHT, statusLight.activeLevel)
+        assertEquals(ProtectionLevel.LIGHT.filterName, statusLight.activeResolverName)
+    }
+
+    @Test
+    fun testSoundSettingsPersistence() {
+        val repo = SettingsRepository()
+        repo.setSoundEnabled(false)
+        assertFalse(repo.soundEnabled.value)
+        repo.setSoundEnabled(true)
+        assertTrue(repo.soundEnabled.value)
     }
 }

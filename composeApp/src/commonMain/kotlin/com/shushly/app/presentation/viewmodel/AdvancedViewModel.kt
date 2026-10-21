@@ -2,14 +2,12 @@ package com.shushly.app.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shushly.app.data.repository.BillingRepository
 import com.shushly.app.data.repository.DnsDirectoryRepository
 import com.shushly.app.data.repository.SettingsRepository
 import com.shushly.app.domain.engine.DnsProtectionController
 import com.shushly.app.domain.model.DnsConfiguration
 import com.shushly.app.domain.model.DnsProvider
 import com.shushly.app.domain.model.Region
-import com.shushly.app.domain.model.ResolverHealth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,61 +15,66 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class PremiumUiState(
-    val isPremium: Boolean = false,
+data class AdvancedUiState(
     val draftConfig: DnsConfiguration = DnsConfiguration(),
     val allProviders: List<DnsProvider> = emptyList(),
     val recommendedProviders: List<DnsProvider> = emptyList(),
     val latencies: Map<String, Long> = emptyMap(),
     val isTestingLatency: Boolean = false,
-    val isPurchasing: Boolean = false,
     val customDohInput: String = "",
     val customDohError: String? = null,
     val customDohSuccess: Boolean = false,
     val statusMessage: String? = null
 )
 
-class PremiumViewModel(
+class AdvancedViewModel(
     private val directoryRepository: DnsDirectoryRepository,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
     private val protectionController: DnsProtectionController
 ) : ViewModel() {
 
     private val _draftConfig = MutableStateFlow(settingsRepository.configuration.value.copy(isCustomConfig = true))
     private val _latencies = MutableStateFlow<Map<String, Long>>(emptyMap())
     private val _isTestingLatency = MutableStateFlow(false)
-    private val _isPurchasing = MutableStateFlow(false)
     private val _customDohInput = MutableStateFlow("")
     private val _customDohError = MutableStateFlow<String?>(null)
     private val _customDohSuccess = MutableStateFlow(false)
     private val _statusMessage = MutableStateFlow<String?>(null)
 
-    val uiState: StateFlow<PremiumUiState> = combine(
-        billingRepository.entitlement,
+    @Suppress("UNCHECKED_CAST")
+    val uiState: StateFlow<AdvancedUiState> = combine(
         _draftConfig,
         _latencies,
         _isTestingLatency,
-        _isPurchasing
-    ) { entitlement, draft, latencies, testing, purchasing ->
+        _customDohInput,
+        _customDohError,
+        _customDohSuccess,
+        _statusMessage
+    ) { args ->
+        val draft = args[0] as DnsConfiguration
+        val latencies = args[1] as Map<String, Long>
+        val testing = args[2] as Boolean
+        val customInput = args[3] as String
+        val customError = args[4] as String?
+        val customSuccess = args[5] as Boolean
+        val statusMsg = args[6] as String?
+
         val recommended = directoryRepository.getRecommendedForRegion(draft.selectedRegion)
-        PremiumUiState(
-            isPremium = entitlement.isPremium,
+        AdvancedUiState(
             draftConfig = draft,
             allProviders = directoryRepository.providers,
             recommendedProviders = recommended,
             latencies = latencies,
             isTestingLatency = testing,
-            isPurchasing = purchasing,
-            customDohInput = _customDohInput.value,
-            customDohError = _customDohError.value,
-            customDohSuccess = _customDohSuccess.value,
-            statusMessage = _statusMessage.value
+            customDohInput = customInput,
+            customDohError = customError,
+            customDohSuccess = customSuccess,
+            statusMessage = statusMsg
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = PremiumUiState()
+        initialValue = AdvancedUiState()
     )
 
     fun setRegion(region: Region) {
@@ -147,21 +150,6 @@ class PremiumViewModel(
             }
             _isTestingLatency.value = false
             _statusMessage.value = "DNS latency test completed"
-        }
-    }
-
-    fun purchaseLifetime() {
-        if (_isPurchasing.value) return
-        viewModelScope.launch {
-            _isPurchasing.value = true
-            _statusMessage.value = "Processing lifetime upgrade..."
-            val result = billingRepository.purchaseLifetime()
-            result.onSuccess {
-                _statusMessage.value = "Premium unlocked! Lifetime access activated."
-            }.onFailure { err ->
-                _statusMessage.value = err.message ?: "Purchase cancelled or unavailable."
-            }
-            _isPurchasing.value = false
         }
     }
 

@@ -2,8 +2,9 @@ package com.shushly.app.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shushly.app.data.repository.BillingRepository
 import com.shushly.app.data.repository.SettingsRepository
+import com.shushly.app.domain.audio.SoundPlayer
+import com.shushly.app.domain.audio.SoundType
 import com.shushly.app.domain.engine.DnsProtectionController
 import com.shushly.app.domain.model.DnsConfiguration
 import com.shushly.app.domain.model.ProtectionLevel
@@ -12,7 +13,6 @@ import com.shushly.app.domain.model.StatusState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 data class HomeUiState(
     val status: ProtectionStatus = ProtectionStatus(),
     val configuration: DnsConfiguration = DnsConfiguration(),
-    val isPremium: Boolean = false,
     val isBusy: Boolean = false,
     val feedbackMessage: String? = null
 )
@@ -28,23 +27,22 @@ data class HomeUiState(
 class HomeViewModel(
     private val protectionController: DnsProtectionController,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository
+    private val soundPlayer: SoundPlayer? = null
 ) : ViewModel() {
 
     private val _isBusy = MutableStateFlow(false)
     private val _feedbackMessage = MutableStateFlow<String?>(null)
+    private var lastObservedState = StatusState.DISABLED
 
     val uiState: StateFlow<HomeUiState> = combine(
         protectionController.status,
         settingsRepository.configuration,
-        billingRepository.entitlement,
         _isBusy,
         _feedbackMessage
-    ) { status, config, entitlement, busy, feedback ->
+    ) { status, config, busy, feedback ->
         HomeUiState(
             status = status,
             configuration = config,
-            isPremium = entitlement.isPremium,
             isBusy = busy,
             feedbackMessage = feedback
         )
@@ -53,6 +51,29 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState()
     )
+
+    init {
+        // Observe status transitions to trigger connected / error audio cues
+        viewModelScope.launch {
+            protectionController.status.collect { status ->
+                val prev = lastObservedState
+                val current = status.state
+                lastObservedState = current
+
+                if (prev != StatusState.CONNECTED && current == StatusState.CONNECTED) {
+                    playSound(SoundType.CONNECTED)
+                } else if (prev != StatusState.ERROR && current == StatusState.ERROR) {
+                    playSound(SoundType.ERROR)
+                }
+            }
+        }
+    }
+
+    private fun playSound(sound: SoundType) {
+        if (settingsRepository.soundEnabled.value) {
+            soundPlayer?.play(sound)
+        }
+    }
 
     fun toggleProtection() {
         val currentStatus = uiState.value.status
@@ -63,11 +84,13 @@ class HomeViewModel(
             _feedbackMessage.value = null
             try {
                 if (currentStatus.state == StatusState.CONNECTED || currentStatus.state == StatusState.CONNECTING) {
+                    playSound(SoundType.TOGGLE_OFF)
                     protectionController.disableProtection()
                     settingsRepository.setProtectionEnabled(false)
                 } else {
+                    playSound(SoundType.TOGGLE_ON)
                     val config = settingsRepository.configuration.value
-                    if (config.isCustomConfig && uiState.value.isPremium) {
+                    if (config.isCustomConfig) {
                         protectionController.enableProtectionWithConfig(config)
                     } else {
                         protectionController.enableProtection(config.protectionLevel)
@@ -75,6 +98,7 @@ class HomeViewModel(
                     settingsRepository.setProtectionEnabled(true)
                 }
             } catch (e: Exception) {
+                playSound(SoundType.ERROR)
                 _feedbackMessage.value = e.message ?: "Failed to change protection state"
             } finally {
                 _isBusy.value = false
@@ -85,6 +109,7 @@ class HomeViewModel(
     fun selectProtectionLevel(level: ProtectionLevel) {
         if (uiState.value.configuration.protectionLevel == level && !uiState.value.configuration.isCustomConfig) return
 
+        playSound(SoundType.MODE_CHANGE)
         viewModelScope.launch {
             settingsRepository.setProtectionLevel(level)
             if (uiState.value.status.state == StatusState.CONNECTED) {

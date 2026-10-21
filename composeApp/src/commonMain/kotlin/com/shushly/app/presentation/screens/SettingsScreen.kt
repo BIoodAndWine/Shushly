@@ -12,16 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,7 +54,7 @@ import com.shushly.app.presentation.viewmodel.SettingsViewModel
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToPremium: () -> Unit,
+    onNavigateToAdvanced: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -111,9 +109,18 @@ fun SettingsScreen(
 
             SettingsToggleRow(
                 title = "Start on Device Boot",
-                subtitle = "Enable protection automatically when the device starts",
+                subtitle = "Enable protection automatically when device starts",
                 checked = uiState.configuration.startOnBoot,
                 onCheckedChange = { viewModel.setStartOnBoot(it) }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            SettingsToggleRow(
+                title = "UI Sound Effects",
+                subtitle = "Play subtle audio cues on connection and mode change",
+                checked = uiState.soundEnabled,
+                onCheckedChange = { viewModel.setSoundEnabled(it) }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -126,6 +133,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -160,20 +168,20 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Advanced / Premium Section
-            SettingsSectionHeader(title = "DNS Configuration")
+            // Advanced Mode Section
+            SettingsSectionHeader(title = "Advanced DNS")
 
             SettingsActionRow(
-                title = "Customize DNS Resolvers",
-                subtitle = if (uiState.isPremium) "Configure primary, backup & custom DoH endpoints" else "Unlocked with $5 Lifetime Premium",
-                onClick = onNavigateToPremium
+                title = "Advanced Mode",
+                subtitle = if (uiState.configuration.isCustomConfig) "Custom primary and backup resolvers active" else "Configure custom resolvers, backup failover & test speed",
+                onClick = onNavigateToAdvanced
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             SettingsActionRow(
                 title = "Restore Default Settings",
-                subtitle = "Reset all DNS endpoints to default Balanced mode",
+                subtitle = "Reset all DNS endpoints to default Light mode",
                 onClick = { viewModel.restoreDefaultConfiguration() }
             )
 
@@ -225,13 +233,17 @@ fun SettingsScreen(
             onDismissRequest = { showAboutDialog = false },
             title = { Text("About Shushly", fontWeight = FontWeight.Bold) },
             text = {
-                Text(
-                    "Shushly v${uiState.appVersion}\n\n" +
-                    "One-click, system-wide DNS ad and tracker blocker.\n" +
-                    "Built with Kotlin Multiplatform and Compose Multiplatform.\n\n" +
-                    "Free public filters provided by Control D, OISD, HaGeZi, and AdGuard.\n" +
-                    "Lifetime Premium: $5 one-time purchase."
-                )
+                Column {
+                    Text(
+                        "Shushly is a free, lightweight, privacy-respecting cross-platform DNS ad blocker built with Kotlin Multiplatform and Compose Multiplatform.\n\n" +
+                        "Modes:\n" +
+                        "• Light (Default): Control D Ads & Tracking\n" +
+                        "• Balanced: Control D OISD Full\n" +
+                        "• Strict: Control D HaGeZi Pro\n" +
+                        "• Advanced Mode: Custom primary/secondary DNS, regional recommendations, and speed testing.\n\n" +
+                        "Version 1.0.0"
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
@@ -250,7 +262,7 @@ private fun SettingsSectionHeader(title: String) {
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.5.sp,
         color = ShushlySapphire,
-        modifier = Modifier.padding(bottom = 8.dp)
+        modifier = Modifier.padding(bottom = 10.dp, start = 4.dp)
     )
 }
 
@@ -266,6 +278,8 @@ private fun SettingsToggleRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+            .clickable { onCheckedChange(!checked) }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -280,7 +294,7 @@ private fun SettingsToggleRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -309,6 +323,7 @@ private fun SettingsActionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -324,15 +339,16 @@ private fun SettingsActionRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
