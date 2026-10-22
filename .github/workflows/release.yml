@@ -7,16 +7,16 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name to release (e.g. v0.1.1)'
+        description: 'Tag name to release (e.g. v0.1.2)'
         required: true
-        default: 'v0.1.1'
+        default: 'v0.1.2'
 
 permissions:
   contents: write
 
 jobs:
   build-android:
-    name: Build Android Release APK
+    name: Build & Sign Android Release APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -32,48 +32,52 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Configure Android Release Signing
+      - name: Configure Android Persistent Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.SHUSHLY_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.SHUSHLY_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SHUSHLY_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SHUSHLY_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Using repository secrets for production release signing..."
-            echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/shushly-release.jks"
-            echo "SHUSHLY_KEYSTORE_PATH=$GITHUB_WORKSPACE/shushly-release.jks" >> $GITHUB_ENV
-            echo "SHUSHLY_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
-            echo "SHUSHLY_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
-            echo "SHUSHLY_KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
-          else
-            echo "Production secrets not configured; generating standard open-source release keystore..."
-            keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/shushly-release.jks" \
-              -alias shushly -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Shushly, OU=Release, O=Shushly, L=Global, ST=OpenSource, C=US" \
-              -storepass shushly_ci_release -keypass shushly_ci_release
-            echo "SHUSHLY_KEYSTORE_PATH=$GITHUB_WORKSPACE/shushly-release.jks" >> $GITHUB_ENV
-            echo "SHUSHLY_KEYSTORE_PASSWORD=shushly_ci_release" >> $GITHUB_ENV
-            echo "SHUSHLY_KEY_ALIAS=shushly" >> $GITHUB_ENV
-            echo "SHUSHLY_KEY_PASSWORD=shushly_ci_release" >> $GITHUB_ENV
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Persistent Android release signing secrets are missing! Refusing to generate an ephemeral key."
+            exit 1
           fi
+          echo "Decoding persistent production release keystore from repository secrets..."
+          echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/shushly-release.jks"
+          echo "SHUSHLY_KEYSTORE_PATH=$GITHUB_WORKSPACE/shushly-release.jks" >> $GITHUB_ENV
+          echo "SHUSHLY_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+          echo "SHUSHLY_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "SHUSHLY_KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
 
       - name: Build Android Release APK
         run: ./gradlew :composeApp:assembleRelease --no-daemon
 
-      - name: Prepare Android Release Asset & Checksum
+      - name: Verify APK Signature & Package Identity
         run: |
-          TAG="${{ github.ref_name || inputs.tag_name }}"
-          mkdir -p dist
-          # Locate release apk (signed or unsigned)
-          APK_FILE=$(find composeApp/build/outputs/apk/release -name "*.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then
-            echo "Error: Release APK was not found!"
+          APK_RAW=$(find composeApp/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_RAW" ]; then
+            echo "::error::Release APK output was not found!"
             exit 1
           fi
-          cp "$APK_FILE" "dist/Shushly-Android-${TAG}.apk"
+          
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
+          echo "Using apksigner at: $APKSIGNER"
+          
+          echo "== Verifying Release Signature =="
+          $APKSIGNER verify --verbose --print-certs "$APK_RAW"
+          
+          mkdir -p dist
+          cp "$APK_RAW" "dist/Shushly.apk"
+          
+          # Clean up decrypted keystore
+          rm -f "$GITHUB_WORKSPACE/shushly-release.jks"
+
+      - name: Generate Android Checksum
+        run: |
           cd dist
-          sha256sum "Shushly-Android-${TAG}.apk" > "Shushly-Android-${TAG}.apk.sha256"
+          sha256sum "Shushly.apk" > "Shushly.apk.sha256"
+          cat "Shushly.apk.sha256"
 
       - name: Upload Android Release Assets
         uses: actions/upload-artifact@v4
@@ -82,7 +86,7 @@ jobs:
           path: dist/*
 
   build-windows:
-    name: Build Windows Application & MSI
+    name: Build & Sign Windows Application & Installers
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -102,33 +106,74 @@ jobs:
             echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
 
-      - name: Build Standalone Distributable & MSI Installer
-        run: .\gradlew.bat :composeApp:createDistributable :composeApp:packageMsi --no-daemon
+      - name: Build Windows Distributable, MSI & EXE Installers
+        run: .\gradlew.bat :composeApp:createDistributable :composeApp:packageMsi :composeApp:packageExe --no-daemon
 
-      - name: Package Windows ZIP & Collect MSI
+      - name: Windows Authenticode Signing & Packaging
         shell: pwsh
+        env:
+          WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
         run: |
-          $TAG = "${{ github.ref_name || inputs.tag_name }}"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          
-          # Compress standalone app folder to Portable ZIP
           $AppDir = "composeApp/build/compose/binaries/main/app/Shushly"
-          $ZipPath = "dist/Shushly-Windows-Portable-$TAG.zip"
-          Compress-Archive -Path "$AppDir\*" -DestinationPath $ZipPath -Force
-          $ZipHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()
-          "$ZipHash  Shushly-Windows-Portable-$TAG.zip" | Out-File -FilePath "$ZipPath.sha256" -Encoding ascii
+          $AppExe = "$AppDir/Shushly.exe"
           
-          # Copy verified MSI installer
-          $MsiFiles = Get-ChildItem -Path "composeApp/build/compose/binaries/main/msi/*.msi" -ErrorAction SilentlyContinue
-          if ($MsiFiles) {
-            $TargetMsi = "dist/Shushly-Windows-$TAG.msi"
-            Copy-Item $MsiFiles[0].FullName -Destination $TargetMsi
-            $MsiHash = (Get-FileHash -Path $TargetMsi -Algorithm SHA256).Hash.ToLower()
-            "$MsiHash  Shushly-Windows-$TAG.msi" | Out-File -FilePath "$TargetMsi.sha256" -Encoding ascii
-          } else {
+          $MsiSource = Get-ChildItem -Path "composeApp/build/compose/binaries/main/msi/*.msi" | Select-Object -First 1
+          if (-not $MsiSource) {
             Write-Error "Windows MSI installer was not generated!"
             exit 1
           }
+          $TargetMsi = "dist/Shushly.msi"
+          Copy-Item $MsiSource.FullName -Destination $TargetMsi
+          
+          $ExeSource = Get-ChildItem -Path "composeApp/build/compose/binaries/main/exe/*.exe" | Select-Object -First 1
+          if (-not $ExeSource) {
+            Write-Error "Windows EXE installer was not generated!"
+            exit 1
+          }
+          $TargetExe = "dist/Shushly-Setup.exe"
+          Copy-Item $ExeSource.FullName -Destination $TargetExe
+
+          # Authenticode Signing
+          if ($env:WINDOWS_CERT_BASE64 -and $env:WINDOWS_CERT_PASSWORD) {
+            Write-Host "Authenticode certificate detected. Locating signtool..."
+            $Signtool = (Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Filter "signtool.exe" -Recurse | Select-Object -Last 1).FullName
+            Write-Host "Using signtool: $Signtool"
+            
+            $CertPath = "$env:TEMP\windows-code-signing.pfx"
+            [IO.File]::WriteAllBytes($CertPath, [Convert]::FromBase64String($env:WINDOWS_CERT_BASE64))
+            
+            Write-Host "Signing executable and installers with RFC 3161 timestamp..."
+            & $Signtool sign /f $CertPath /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $AppExe
+            & $Signtool sign /f $CertPath /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $TargetMsi
+            & $Signtool sign /f $CertPath /p $env:WINDOWS_CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $TargetExe
+            
+            Write-Host "Verifying Authenticode signatures..."
+            & $Signtool verify /pa /v $AppExe
+            & $Signtool verify /pa /v $TargetMsi
+            & $Signtool verify /pa /v $TargetExe
+            
+            Remove-Item $CertPath -Force -ErrorAction SilentlyContinue
+            Write-Host "Authenticode code signing and verification succeeded."
+          } else {
+            Write-Host "Authenticode code-signing secret (WINDOWS_CERT_BASE64) is not configured in repository secrets."
+            Write-Host "Packaging authentic production Windows artifacts without falsifying certificate identities."
+          }
+
+          # Compress standalone app folder to Portable ZIP (after signing Shushly.exe)
+          $ZipPath = "dist/Shushly-Windows-Portable.zip"
+          Compress-Archive -Path "$AppDir\*" -DestinationPath $ZipPath -Force
+
+          # Generate individual SHA256 checksums
+          $MsiHash = (Get-FileHash -Path $TargetMsi -Algorithm SHA256).Hash.ToLower()
+          "$MsiHash  Shushly.msi" | Out-File -FilePath "$TargetMsi.sha256" -Encoding ascii
+
+          $ExeHash = (Get-FileHash -Path $TargetExe -Algorithm SHA256).Hash.ToLower()
+          "$ExeHash  Shushly-Setup.exe" | Out-File -FilePath "$TargetExe.sha256" -Encoding ascii
+
+          $ZipHash = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash.ToLower()
+          "$ZipHash  Shushly-Windows-Portable.zip" | Out-File -FilePath "$ZipPath.sha256" -Encoding ascii
 
       - name: Upload Windows Release Assets
         uses: actions/upload-artifact@v4
@@ -137,7 +182,7 @@ jobs:
           path: dist/*
 
   publish-release:
-    name: Publish GitHub Release
+    name: Publish Clean Production GitHub Release
     needs: [build-android, build-windows]
     runs-on: ubuntu-latest
     steps:
@@ -150,15 +195,27 @@ jobs:
           path: release-assets
           merge-multiple: true
 
-      - name: Consolidate SHA256SUMS
+      - name: Consolidate SHA256SUMS & Verify Filenames
         run: |
           cd release-assets
-          cat *.sha256 > SHA256SUMS.txt
+          cat *.sha256 | sort > SHA256SUMS.txt
           rm -f *.sha256
-          ls -la
+          
+          echo "== Consolidated Checksums (SHA256SUMS.txt) =="
           cat SHA256SUMS.txt
+          
+          echo "== Release Artifacts Directory =="
+          ls -lh
+          
+          # Verify exact mandatory release files exist
+          for FILE in "Shushly.apk" "Shushly.msi" "Shushly-Setup.exe" "Shushly-Windows-Portable.zip" "SHA256SUMS.txt"; do
+            if [ ! -s "$FILE" ]; then
+              echo "::error::Missing or empty mandatory release asset: $FILE"
+              exit 1
+            fi
+          done
 
-      - name: Create GitHub Release
+      - name: Publish Verified GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || inputs.tag_name }}
