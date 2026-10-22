@@ -48,5 +48,15 @@ Thumbs.db
 *.pfx
 *.p12
 
+# Firebase
+.firebase/
+
+# Website build & dependencies
+website/dist/
+website/node_modules/
+*.tsbuildinfo
+qa-screenshots/
+
+
 # Log files
 *.log
