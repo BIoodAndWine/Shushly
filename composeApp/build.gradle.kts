@@ -83,8 +83,8 @@ android {
         applicationId = "com.shushly.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
     }
 
     signingConfigs {
@@ -99,6 +99,8 @@ android {
                 storePassword = keystorePassword
                 keyAlias = keyAliasStr
                 keyPassword = keyPasswordStr
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }
@@ -139,7 +141,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Exe, TargetFormat.Msi)
             packageName = "Shushly"
-            packageVersion = "0.1.1"
+            packageVersion = "0.1.2"
             description = "Shushly - One-Click DNS Ad Blocker"
             copyright = "Copyright 2026 Shushly"
             vendor = "Shushly"

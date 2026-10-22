@@ -84,14 +84,16 @@ jobs:
             echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
 
-      - name: Build Windows Distributable & MSI
-        run: .\gradlew.bat :composeApp:createDistributable :composeApp:packageMsi --no-daemon
+      - name: Build Windows Distributable, MSI & EXE
+        run: .\gradlew.bat :composeApp:createDistributable :composeApp:packageMsi :composeApp:packageExe --no-daemon
 
-      - name: Upload Windows Distributable & MSI
+      - name: Upload Windows Installers
         uses: actions/upload-artifact@v4
         with:
-          name: Shushly-Windows-MSI
-          path: composeApp/build/compose/binaries/main/msi/*.msi
+          name: Shushly-Windows-Installers
+          path: |
+            composeApp/build/compose/binaries/main/msi/*.msi
+            composeApp/build/compose/binaries/main/exe/*.exe
 
   build-macos-ios:
     name: Build macOS & iOS Native Framework

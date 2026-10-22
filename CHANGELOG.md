@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.2] - 2026-10-22
+
+### Added & Improved
+- **Clean Artifact Naming Convention:**
+  - Transitioned public GitHub Release assets to clean, standard filenames without version tags, debug suffixes, or architecture labels:
+    - Android: `Shushly.apk`
+    - Windows MSI: `Shushly.msi`
+    - Windows EXE: `Shushly-Setup.exe`
+    - Windows Portable: `Shushly-Windows-Portable.zip`
+    - Integrity Checksums: `SHA256SUMS.txt`
+  - Version numbers remain preserved in Git tags (`v0.1.2`), release notes, and in-app metadata.
+- **Persistent Production Android Signing:**
+  - Configured persistent RSA 2048 production release keystore (`CN=Karl Molles`) with 10,000 days validity.
+  - Enabled dual APK signature schemes: Scheme v1 (JAR signing) and Scheme v2 (Full APK Signature) for complete Android 7.0–15 compatibility.
+  - Eliminated ephemeral CI signing keys; stored production credentials securely in GitHub Actions secrets.
+  - Integrated automated `apksigner verify --verbose --print-certs` into the release pipeline to guarantee signature integrity prior to publication.
+- **Windows Authenticode Code Signing & EXE Installer:**
+  - Added Windows bootstrapper setup executable `Shushly-Setup.exe` via Compose Desktop and WiX Toolset.
+  - Added production Authenticode signing and RFC 3161 timestamping pipeline via `signtool.exe` for `Shushly.exe`, `Shushly.msi`, and `Shushly-Setup.exe`.
+  - Enforced transparent release behavior when external CA certificates are unconfigured, avoiding fake self-signed identities while maintaining authentic production binaries.
+- **Documentation & Release Automation:**
+  - Overhauled `BUILD_AND_RELEASE.md` with step-by-step verification commands, certificate fingerprints, and GitHub Secrets requirements.
+  - Updated `README.md` download links and installation guidance.
+
+---
+
 ## [0.1.1] - 2026-10-21
 
 ### Changed & Fixed
